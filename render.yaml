@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: metanite-downloader
+    env: python
+    buildCommand: "apt-get install -y ffmpeg || true && pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
