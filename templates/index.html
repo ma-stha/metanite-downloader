@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meta Downloader</title>
+  <link rel="icon" href="/static/metalogo.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #08080f;
+      --red:      #e8001c;
+      --red2:     #ff1a35;
+      --glow:     rgba(232, 0, 28, 0.2);
+      --glow2:    rgba(232, 0, 28, 0.08);
+      --glass:    rgba(255,255,255,0.04);
+      --glass2:   rgba(255,255,255,0.07);
+      --border:   rgba(255,255,255,0.08);
+      --border-r: rgba(232,0,28,0.3);
+      --text:     #f0f0f5;
+      --muted:    #666680;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+    }
+
+    /* Background layers */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 55% 45% at 15% 10%, rgba(232,0,28,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 85% 90%, rgba(120,0,20,0.06) 0%, transparent 60%);
+    }
+
+    /* Subtle grid */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 55px 55px;
+      mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black 20%, transparent 100%);
+    }
+
+    .wrapper {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px 60px;
+      gap: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .logo-wrap {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+
+    .logo-wrap img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 18px rgba(232,0,28,0.5));
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+      background: linear-gradient(135deg, #fff 20%, var(--red2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    .tagline {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── MAIN CARD ── */
+    .card {
+      width: 100%; max-width: 500px;
+      background: var(--glass);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px 28px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 30px 80px rgba(0,0,0,0.7),
+        0 0 50px var(--glow2);
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    /* ── INPUT ── */
+    .field-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; font-weight: 500;
+      color: var(--muted); letter-spacing: 2px;
+      text-transform: uppercase;
+      display: block; margin-bottom: 8px;
+    }
+
+    .url-wrap {
+      position: relative; margin-bottom: 16px;
+    }
+
+    #url {
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 48px 14px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      caret-color: var(--red);
+    }
+
+    #url::placeholder { color: var(--muted); }
+
+    #url:focus {
+      border-color: rgba(232,0,28,0.4);
+      box-shadow: 0 0 0 3px rgba(232,0,28,0.08);
+    }
+
+    .paste-icon {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      font-size: 16px; color: var(--muted); cursor: pointer;
+      transition: color 0.2s;
+      background: none; border: none;
+    }
+    .paste-icon:hover { color: var(--red2); }
+
+    /* ── QUALITY ── */
+    .quality-grid {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 8px; margin-bottom: 20px;
+    }
+
+    .q-opt {
+      position: relative;
+    }
+
+    .q-opt input[type=radio] {
+      position: absolute; opacity: 0; width: 0; height: 0;
+    }
+
+    .q-opt label {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 5px; padding: 13px 8px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .q-opt label .qi { font-size: 18px; }
+    .q-opt label .qn { font-size: 12px; font-weight: 700; color: var(--text); }
+    .q-opt label .qd { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); }
+
+    .q-opt input:checked + label {
+      border-color: var(--red);
+      background: rgba(232,0,28,0.08);
+      box-shadow: 0 0 20px rgba(232,0,28,0.12);
+    }
+
+    .q-opt input:checked + label .qn { color: var(--red2); }
+
+    .q-opt label:hover {
+      border-color: rgba(232,0,28,0.3);
+      background: rgba(232,0,28,0.04);
+    }
+
+    /* ── DOWNLOAD BUTTON ── */
+    #dlBtn {
+      width: 100%;
+      padding: 16px;
+      border: none; border-radius: 12px; cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px; font-weight: 700;
+      background: linear-gradient(135deg, #e8001c 0%, #ff1a35 50%, #cc0018 100%);
+      color: white;
+      letter-spacing: 0.3px;
+      transition: all 0.25s;
+      box-shadow: 0 4px 30px rgba(232,0,28,0.4), 0 0 60px rgba(232,0,28,0.1);
+      position: relative; overflow: hidden;
+    }
+
+    #dlBtn::before {
+      content: '';
+      position: absolute; top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.5s;
+    }
+
+    #dlBtn:hover::before { left: 150%; }
+    #dlBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(232,0,28,0.5); }
+    #dlBtn:active { transform: translateY(0); }
+    #dlBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── PROGRESS ── */
+    .progress-wrap {
+      margin-top: 18px; display: none;
+    }
+    .progress-wrap.show { display: block; }
+
+    .prog-meta {
+      display: flex; justify-content: space-between;
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      color: var(--muted); margin-bottom: 6px;
+    }
+
+    .prog-bg {
+      height: 3px; background: rgba(255,255,255,0.06);
+      border-radius: 100px; overflow: hidden;
+    }
+
+    .prog-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--red), #ff6680);
+      border-radius: 100px;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 8px var(--red);
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px; background: var(--border);
+      margin: 22px 0;
+    }
+
+    /* ── PREVIEW ── */
+    #preview {
+      display: none;
+      align-items: center; gap: 14px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    #preview.show { display: flex; }
+
+    #preview img {
+      width: 90px; min-width: 90px; height: 58px;
+      border-radius: 8px; object-fit: cover;
+    }
+
+    .prev-info { flex: 1; overflow: hidden; }
+
+    .prev-title {
+      font-size: 12px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .prev-sub {
+      font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
+    }
+
+    /* ── ERROR ── */
+    .err-box {
+      display: none; margin-top: 14px;
+      background: rgba(232,0,28,0.07);
+      border: 1px solid rgba(232,0,28,0.25);
+      border-radius: 10px; padding: 11px 14px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: #ff6680; align-items: center; gap: 8px;
+    }
+    .err-box.show { display: flex; }
+
+    /* ── HISTORY ── */
+    .history-section {
+      width: 100%; max-width: 500px;
+      margin-top: 20px;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .hist-title {
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .hist-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .hist-item {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12px;
+    }
+
+    .hist-item .hi-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--red); flex-shrink: 0;
+      box-shadow: 0 0 6px var(--red);
+    }
+
+    .hist-item .hi-text {
+      flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      margin-top: 36px; text-align: center;
+      font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
+      letter-spacing: 1px;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { filter: drop-shadow(0 0 14px rgba(232,0,28,0.4)); }
+      50%       { filter: drop-shadow(0 0 28px rgba(232,0,28,0.75)); }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 480px) {
+      .card { padding: 22px 16px; }
+      .quality-grid { gap: 6px; }
+      .q-opt label { padding: 10px 4px; }
+      .q-opt label .qi { font-size: 15px; }
+      .q-opt label .qn { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-wrap">
+      <img src="/static/metalogo.png" alt="Meta Downloader Logo" />
+    </div>
+    <h1>Meta Downloader</h1>
+    <p class="tagline">Fast &nbsp;•&nbsp; Clean &nbsp;•&nbsp; Private</p>
+  </header>
+
+  <!-- CARD -->
+  <div class="card">
+
+    <!-- URL INPUT -->
+    <label class="field-label" for="url">Paste Video Link</label>
+    <div class="url-wrap">
+      <input type="text" id="url" placeholder="https://youtube.com/watch?v=..." autocomplete="off" spellcheck="false" />
+      <button class="paste-icon" id="pasteBtn" title="Paste">📋</button>
+    </div>
+
+    <!-- QUALITY -->
+    <label class="field-label">Select Quality</label>
+    <div class="quality-grid">
+      <div class="q-opt">
+        <input type="radio" name="quality" id="q-best" value="best" checked />
+        <label for="q-best">
+          <span class="qi">🎬</span>
+          <span class="qn">Best HD</span>
+          <span class="qd">Max res</span>
+        </label>
+      </div>
+      <div class="q-opt">
+        <input type="radio" name="quality" id="q-720" value="720" />
+        <label for="q-720">
+          <span class="qi">📺</span>
+          <span class="qn">720p</span>
+          <span class="qd">Balanced</span>
+        </label>
+      </div>
+      <div class="q-opt">
+        <input type="radio" name="quality" id="q-audio" value="audio" />
+        <label for="q-audio">
+          <span class="qi">🎵</span>
+          <span class="qn">MP3</span>
+          <span class="qd">Audio only</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- BUTTON -->
+    <button id="dlBtn" onclick="downloadVideo()">⬇ Download</button>
+
+    <!-- PROGRESS -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="prog-meta">
+        <span id="progStatus">Processing…</span>
+        <span id="progPct">0%</span>
+      </div>
+      <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+
+    <!-- ERROR -->
+    <div class="err-box" id="errBox">
+      <span>⚠</span><span id="errText">Something went wrong.</span>
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="divider"></div>
+
+    <!-- PREVIEW -->
+    <div id="preview">
+      <img id="prevThumb" src="" alt="thumbnail" />
+      <div class="prev-info">
+        <div class="prev-title" id="prevTitle"></div>
+        <div class="prev-sub" id="prevSub"></div>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+
+  <!-- HISTORY -->
+  <div class="history-section" id="histSection" style="display:none;">
+    <div class="hist-title">Recent Downloads</div>
+    <div class="hist-list" id="histList">
+      {% for item in history %}
+      <div class="hist-item">
+        <div class="hi-dot"></div>
+        <div class="hi-text">{{ item }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <footer>METANITE MARKETING &nbsp;•&nbsp; PERSONAL USE ONLY</footer>
+
+</div><!-- /wrapper -->
+
+<script>
+  const urlInput   = document.getElementById('url');
+  const dlBtn      = document.getElementById('dlBtn');
+  const progWrap   = document.getElementById('progressWrap');
+  const progFill   = document.getElementById('progFill');
+  const progStatus = document.getElementById('progStatus');
+  const progPct    = document.getElementById('progPct');
+  const errBox     = document.getElementById('errBox');
+  const errText    = document.getElementById('errText');
+  const preview    = document.getElementById('preview');
+  const prevThumb  = document.getElementById('prevThumb');
+  const prevTitle  = document.getElementById('prevTitle');
+  const prevSub    = document.getElementById('prevSub');
+  const histSection= document.getElementById('histSection');
+  const histList   = document.getElementById('histList');
+
+  let progInterval = null;
+
+  // ── AUTO PASTE ON PAGE PASTE EVENT ──
+  document.addEventListener('paste', e => {
+    const text = e.clipboardData.getData('text');
+    if (text) { urlInput.value = text; fetchPreview(text); }
+  });
+
+  // ── PASTE BUTTON ──
+  document.getElementById('pasteBtn').addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) { urlInput.value = text; fetchPreview(text); }
+    } catch { urlInput.focus(); }
+  });
+
+  // ── INPUT CHANGE → PREVIEW ──
+  let debounce;
+  urlInput.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => fetchPreview(urlInput.value.trim()), 700);
+  });
+
+  // ── FETCH PREVIEW ──
+  async function fetchPreview(url) {
+    if (!url) return;
+    clearErr();
+    try {
+      const res = await fetch('/preview', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (data.thumbnail) {
+        prevThumb.src = data.thumbnail;
+        prevTitle.textContent = data.title || '';
+        prevSub.textContent = '';
+        preview.classList.add('show');
+      }
+    } catch { /* silent */ }
+  }
+
+  // ── ERROR ──
+  function showErr(msg) {
+    errText.textContent = msg;
+    errBox.classList.add('show');
+  }
+  function clearErr() { errBox.classList.remove('show'); }
+
+  // ── PROGRESS ──
+  function startProgress() {
+    progWrap.classList.add('show');
+    progFill.style.width = '0%';
+    let pct = 0;
+    progInterval = setInterval(() => {
+      if (pct < 30) pct += 4;
+      else if (pct < 65) pct += 1.5;
+      else if (pct < 88) pct += 0.5;
+      else if (pct < 94) pct += 0.15;
+      progFill.style.width = pct + '%';
+      progPct.textContent = Math.round(pct) + '%';
+      if (pct > 30) progStatus.textContent = 'Downloading…';
+      if (pct > 65) progStatus.textContent = 'Merging…';
+      if (pct > 88) progStatus.textContent = 'Finalising…';
+    }, 250);
+  }
+
+  function endProgress(ok) {
+    clearInterval(progInterval);
+    progFill.style.width = '100%';
+    progPct.textContent = '100%';
+    progStatus.textContent = ok ? 'Done!' : 'Failed.';
+    setTimeout(() => progWrap.classList.remove('show'), 2000);
+  }
+
+  // ── ADD TO HISTORY ──
+  function addHistory(title) {
+    const item = document.createElement('div');
+    item.className = 'hist-item';
+    item.innerHTML = `<div class="hi-dot"></div><div class="hi-text">${title}</div>`;
+    histList.prepend(item);
+    histSection.style.display = 'block';
+  }
+
+  // ── DOWNLOAD ──
+  async function downloadVideo() {
+    const url     = urlInput.value.trim();
+    const quality = document.querySelector('input[name="quality"]:checked').value;
+
+    if (!url) { showErr('Please paste a video URL first.'); return; }
+
+    clearErr();
+    dlBtn.disabled = true;
+    dlBtn.textContent = '⏳ Downloading…';
+    startProgress();
+
+    try {
+      // Use form-encoded POST — matches working app.py exactly
+      const res = await fetch('/download', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `url=${encodeURIComponent(url)}&quality=${quality}`
+      });
+
+      if (!res.ok) {
+        endProgress(false);
+        showErr('Download failed. Check the URL and try again.');
+        return;
+      }
+
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = quality === 'audio' ? 'audio.mp3' : 'video.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+      endProgress(true);
+      if (prevTitle.textContent) addHistory(prevTitle.textContent);
+
+    } catch {
+      endProgress(false);
+      showErr('Network error — please try again.');
+    } finally {
+      dlBtn.disabled = false;
+      dlBtn.textContent = '⬇ Download';
+    }
+  }
+</script>
+</body>
+</html>
