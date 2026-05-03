@@ -1,4 +1,3 @@
-cat > ~/Downloads/metanite-downloader/app.py << 'EOF'
 from flask import Flask, render_template, request, send_file, jsonify
 import yt_dlp
 import os
@@ -36,7 +35,6 @@ def download():
     url = request.form["url"]
     quality = request.form["quality"]
 
-    # Try cobalt.tools API first (works on servers)
     try:
         cobalt_res = requests.post(
             "https://api.cobalt.tools/",
@@ -53,23 +51,19 @@ def download():
         )
         data = cobalt_res.json()
 
-        if data.get("status") == "tunnel" or data.get("status") == "redirect":
+        if data.get("status") in ["tunnel", "redirect"]:
             download_url = data.get("url")
             ext = "mp3" if quality == "audio" else "mp4"
             filename = f"{DOWNLOAD_FOLDER}/video.{ext}"
-
             file_res = requests.get(download_url, stream=True, timeout=60)
             with open(filename, "wb") as f:
                 for chunk in file_res.iter_content(chunk_size=8192):
                     f.write(chunk)
-
             history.insert(0, url)
             return send_file(filename, as_attachment=True)
-
     except Exception as e:
         print(f"Cobalt failed: {e}")
 
-    # Fallback to yt-dlp
     ydl_opts = {
         "format": get_format(quality),
         "merge_output_format": "mp4",
